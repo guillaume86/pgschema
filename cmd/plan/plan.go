@@ -12,6 +12,7 @@ import (
 	"github.com/pgplex/pgschema/internal/diff"
 	"github.com/pgplex/pgschema/internal/fingerprint"
 	"github.com/pgplex/pgschema/internal/include"
+	"github.com/pgplex/pgschema/internal/model" // merp fork
 	"github.com/pgplex/pgschema/internal/plan"
 	"github.com/pgplex/pgschema/internal/postgres"
 	"github.com/pgplex/pgschema/ir"
@@ -198,6 +199,9 @@ type PlanConfig struct {
 // CreateDesiredStateProvider creates either an embedded PostgreSQL instance or connects to an external database
 // for validating the desired state schema. The caller is responsible for calling Stop() on the returned provider.
 func CreateDesiredStateProvider(config *PlanConfig) (postgres.DesiredStateProvider, error) {
+	if model.IsDocumentPath(config.File) { // merp fork: a .pgmodel needs no database
+		return model.NewProvider(config.File)
+	}
 	// Detect target database PostgreSQL version (needed for both embedded and external)
 	// and its extension installation schemas (needed for the external database's
 	// extension schema consistency check, issue #518) in a single connection.
@@ -273,6 +277,9 @@ func CreateEmbeddedPostgresForPlan(config *PlanConfig, pgVersion postgres.Postgr
 // The caller must provide a non-nil provider instance for validating the desired state schema.
 // The caller is responsible for managing the provider lifecycle (creation and cleanup).
 func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*plan.Plan, error) {
+	if source, ok := provider.(desiredIRSource); ok { // merp fork: .pgmodel desired state
+		return generatePlanFromIR(config, source)
+	}
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
