@@ -295,3 +295,4 @@ Each test case contains: `old.sql` (starting state), `new.sql` (desired state), 
 8 categories: `domains/`, `functions/`, `materialized_views/`, `procedures/`, `sequences/`, `tables/`, `types/`, `views/`
 
 For detailed test workflows, filtering, and regeneration, see the **Run Tests** skill.
+@fork/README.md
