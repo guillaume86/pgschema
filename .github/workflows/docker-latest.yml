@@ -1,11 +1,6 @@
 name: Docker Latest Build
 
-on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
+on: workflow_dispatch
 
 env:
   REGISTRY: docker.io

@@ -1,11 +1,6 @@
 name: CI Test
 
-on:
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
+on: workflow_dispatch
 
 jobs:
   test:
