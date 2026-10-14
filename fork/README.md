@@ -66,7 +66,7 @@ document must be named `*.pgmodel`, not `*.pgmodel.json`).
 
 ## Build for the four RIDs
 
-`mise x go@1.24 -- fork/build-rids.sh` cross-builds `bin/<rid>/pgschema` (`.exe` for win-x64) for linux-x64, linux-arm64, osx-arm64 and win-x64; `fork/pack-nupkg.sh` packs them as `Merp.Pgschema.<version>.nupkg` (`MERP_VERSION`, `MERP_FEED`) into a folder feed.
+`mise x go@1.24 -- fork/build-rids.sh` cross-builds `bin/<rid>/pgschema` (`.exe` for win-x64) for linux-x64, linux-arm64, osx-arm64 and win-x64. merp packs them: its `mise run pack` puts them under `runtimes/<rid>/native/` of `Merp.Pgschema`, the one package that holds the client too, so the fork packs nothing itself.
 
 ## Rebase procedure
 
