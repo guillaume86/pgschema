@@ -63,6 +63,10 @@ document must be named `*.pgmodel`, not `*.pgmodel.json`).
 - The target schema must exist: like `--file`, planning against a missing schema fails with
   "schema '<name>' does not exist in the database".
 
+## Build for the four RIDs
+
+`mise x go@1.24 -- fork/build-rids.sh` cross-builds `bin/<rid>/pgschema` (`.exe` for win-x64) for linux-x64, linux-arm64, osx-arm64 and win-x64; `fork/pack-nupkg.sh` packs them as `Merp.Pgschema.<version>.nupkg` (`MERP_VERSION`, `MERP_FEED`) into a folder feed.
+
 ## Rebase procedure
 
 ```sh
