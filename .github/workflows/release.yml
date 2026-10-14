@@ -1,13 +1,6 @@
 name: Release Binary and Docker Versioned
 
-on:
-  push:
-    tags:
-      - "v*.*.*"
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-  workflow_dispatch:
+on: workflow_dispatch
 
 permissions:
   contents: write

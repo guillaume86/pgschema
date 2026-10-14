@@ -18,6 +18,7 @@ stays upstream's and is not exercised by merp.
 | # | Patch | New files | Upstream files hooked |
 |---|---|---|---|
 | 1 | **Model source.** `plan --file x.pgmodel` and `apply --file x.pgmodel` read the desired state from a `.pgmodel` (upstream's IR as JSON) and hand it straight to the differ. A SQL `--file` boots an embedded Postgres to materialize the desired state on every call; a `.pgmodel` starts nothing. The provider is selected by the file extension; there is no new flag. | `internal/model/` (document reader, the third `DesiredStateProvider`, tests), `cmd/plan/model.go` (`generatePlanFromIR`), `ir/model_normalize.go` (exports the inspector's normalization) | `cmd/plan/plan.go` only (7 added lines, none modified) |
+| 2 | **CI off.** Every workflow's `on:` block is `workflow_dispatch` only: nothing runs on push, pull request, schedule or release, each workflow still runs by hand. | none | `.github/workflows/ci-test.yml`, `.github/workflows/docker-latest.yml`, `.github/workflows/release.yml` |
 
 Every hook carries a `merp fork` comment: `git grep -n "merp fork"` lists them all.
 
