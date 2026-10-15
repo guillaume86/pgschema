@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/pgplex/pgschema/internal/postgres"
+	"github.com/pgplex/pgschema/internal/refactor"
 	"github.com/pgplex/pgschema/ir"
 )
 
@@ -32,6 +33,9 @@ func NewProvider(path string) (*Provider, error) {
 func (p *Provider) DesiredIR(schema string) (*ir.IR, error) {
 	return p.doc.DesiredState(schema)
 }
+
+// Refactor returns the document's rename directives, in the block's order.
+func (p *Provider) Refactor() []refactor.Entry { return p.doc.Refactor }
 
 // GetConnectionDetails returns zero values: a model source has no database.
 func (p *Provider) GetConnectionDetails() (string, int, string, string, string) {

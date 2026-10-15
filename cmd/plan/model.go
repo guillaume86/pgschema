@@ -50,6 +50,15 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 		fmt.Sscanf(v, "%d", &targetMajorVersion)
 	}
 
-	diffs := diff.GenerateMigrationForTarget(currentStateIR, desiredStateIR, config.Schema, targetMajorVersion)
-	return plan.NewPlanWithFingerprint(diffs, sourceFingerprint, targetMajorVersion, currentStateIR), nil
+	// The fingerprint above is of the database as inspected; the renames below
+	// move the in-memory copy the differ reads.
+	renames, refactorReport, err := applyRefactor(source, currentStateIR, config.Schema)
+	if err != nil {
+		return nil, err
+	}
+
+	diffs := append(renames, diff.GenerateMigrationForTarget(currentStateIR, desiredStateIR, config.Schema, targetMajorVersion)...)
+	p := plan.NewPlanWithFingerprint(diffs, sourceFingerprint, targetMajorVersion, currentStateIR)
+	p.Refactor = refactorReport
+	return p, nil
 }

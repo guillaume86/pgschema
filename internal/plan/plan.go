@@ -63,6 +63,10 @@ type Plan struct {
 	// Groups is the ordered list of execution groups
 	Groups []ExecutionGroup `json:"groups"`
 
+	// Refactor reports the .pgmodel's rename directives, each with whether it
+	// applied (merp fork, internal/refactor).
+	Refactor json.RawMessage `json:"refactor,omitempty"`
+
 	// SourceDiffs stores original diff information for summary calculation
 	// This field is only serialized in debug mode
 	SourceDiffs []diff.Diff `json:"source_diffs,omitempty"`

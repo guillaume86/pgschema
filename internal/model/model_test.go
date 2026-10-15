@@ -111,7 +111,9 @@ func TestParseRefusals(t *testing.T) {
 		{"missing model", `"specVersion": "1.0"`, "missing model"},
 		{"null model", `"specVersion": "1.0", "model": null`, "missing model"},
 		{"wrong specVersion", `"specVersion": "2.0", "model": ` + goodModel, `unsupported .pgmodel specVersion "2.0": this build supports 1.0`},
-		{"refactor", `"specVersion": "1.0", "model": ` + goodModel + `, "refactor": [{"id": "r1", "op": "rename", "kind": "table", "from": "merp.a", "to": "merp.b"}]`, "rename directives are not supported in this build"},
+		{"refactor unknown op", `"specVersion": "1.0", "model": ` + goodModel + `, "refactor": [{"op": "move", "kind": "table", "from": "merp.a", "to": "merp.b"}]`, `unsupported op "move"`},
+		{"refactor unknown kind", `"specVersion": "1.0", "model": ` + goodModel + `, "refactor": [{"op": "rename", "kind": "view", "from": "merp.a", "to": "merp.b"}]`, `unsupported kind "view"`},
+		{"refactor unknown entry field", `"specVersion": "1.0", "model": ` + goodModel + `, "refactor": [{"id": "r1", "op": "rename", "kind": "table", "from": "merp.a", "to": "merp.b"}]`, `unknown field "id"`},
 		{"unknown envelope field", `"specVersion": "1.0", "model": ` + goodModel + `, "refactors": []`, `unknown field "refactors"`},
 		{"unknown IR field", `"specVersion": "1.0", "model": {"schemas": {"merp": {"name": "merp", "not_an_ir_field": {}}}}`, `unknown field "not_an_ir_field"`},
 		{"not JSON", `"specVersion": `, "invalid .pgmodel"},
@@ -145,5 +147,17 @@ func TestIsDocumentPath(t *testing.T) {
 		if got := IsDocumentPath(path); got != want {
 			t.Errorf("IsDocumentPath(%q) = %v, want %v", path, got, want)
 		}
+	}
+}
+
+func TestParseReadsTypedRefactorEntries(t *testing.T) {
+	d, err := Parse([]byte(doc(`"specVersion": "1.0", "model": ` + goodModel + `, "refactor": [
+		{"op": "rename", "kind": "table", "from": "merp.item", "to": "merp.thing"},
+		{"op": "rename", "kind": "column", "from": "merp.thing.id", "to": "merp.thing.key"}]`)))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(d.Refactor) != 2 || d.Refactor[1].Kind != "column" || d.Refactor[1].To != "merp.thing.key" {
+		t.Errorf("entries: %+v", d.Refactor)
 	}
 }
