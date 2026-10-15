@@ -19,6 +19,7 @@ stays upstream's and is not exercised by merp.
 |---|---|---|---|
 | 1 | **Model source.** `plan --file x.pgmodel` and `apply --file x.pgmodel` read the desired state from a `.pgmodel` (upstream's IR as JSON) and hand it straight to the differ. A SQL `--file` boots an embedded Postgres to materialize the desired state on every call; a `.pgmodel` starts nothing. The provider is selected by the file extension; there is no new flag. | `internal/model/` (document reader, the third `DesiredStateProvider`, tests), `cmd/plan/model.go` (`generatePlanFromIR`), `ir/model_normalize.go` (exports the inspector's normalization) | `cmd/plan/plan.go` only (7 added lines, none modified) |
 | 2 | **CI off.** Every workflow's `on:` block is `workflow_dispatch` only: nothing runs on push, pull request, schedule or release, each workflow still runs by hand. | none | `.github/workflows/ci-test.yml`, `.github/workflows/docker-latest.yml`, `.github/workflows/release.yml` |
+| 3 | **Renames** (merp#898; the merp issues call it patch 2, the CI-off patch took that number here first). The `.pgmodel`'s `refactor` block lists `{op: "rename", kind: table\|column\|constraint\|index, from, to}` entries; `plan` and `apply` apply them by inspection, in the block's order: old present and new absent, the inspected current state is renamed in memory and an `ALTER TABLE … RENAME TO \| RENAME COLUMN \| RENAME CONSTRAINT` or `ALTER INDEX … RENAME TO` step runs first in the plan; old absent, nothing; both present, the plan fails (exit 1, `refused: rename <kind> <from> to <to>: both exist. Nothing was planned.`). No cascade (a constraint or index not listed is diffed as the model says), no inference. The plan JSON gains `"refactor": [{op, kind, from, to, applied}]`, one per entry. | `internal/refactor/` (entries, validation, the in-memory rename, tests), `cmd/plan/refactor.go`, `internal/model/refactor_integration_test.go` | `internal/plan/plan.go` (one field, `Plan.Refactor`); the patch 1 files `internal/model/` (typed `Document.Refactor`, `Provider.Refactor`) and `cmd/plan/model.go` (the call) |
 
 Every hook carries a `merp fork` comment: `git grep -n "merp fork"` lists them all.
 
@@ -52,7 +53,13 @@ document must be named `*.pgmodel`, not `*.pgmodel.json`).
 - The envelope and `model` are decoded strictly: an unknown field is an error, so a misspelled key
   (`refactors`) cannot silently drop rename directives, and a document written for another IR shape
   fails at load instead of planning against a truncated state.
-- `refactor` must be absent or empty: rename directives are not supported in this build.
+- `refactor` is absent or a list of `{op: "rename", kind, from, to}` (patch 3). Any other `op` or `kind`, an
+  unqualified path, a rename that changes more than the last name, or an unknown entry field is refused at
+  load. Paths are schema-qualified: `merp.t` (table, index), `merp.t.leaf` (column, constraint); a column or
+  constraint path names its table as the block has renamed it so far. A column rename also rewrites the
+  column's name in the inspected constraints, indexes, check clauses and foreign keys that read it (what
+  PostgreSQL does), outside string literals; a table rename follows into foreign keys that reference it. The
+  index behind a renamed primary key or unique constraint is renamed with it, as PostgreSQL does.
 - `config` is informational and never re-applied. Scope comes from `--schema`, as for `--file`;
   the model must declare that schema. Only that schema is planned.
 - The model is assumed already filtered for ignores by its producer; a `.pgschemaignore` in the
