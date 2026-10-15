@@ -2,7 +2,6 @@ package plan
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pgplex/pgschema/cmd/util"
 	"github.com/pgplex/pgschema/internal/diff"
@@ -35,19 +34,26 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 		return nil, err
 	}
 
-	currentStateIR, err := util.GetIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.SSLMode, config.Schema, config.ApplicationName, ignoreConfig, "")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current state from database: %w", err)
-	}
-
-	sourceFingerprint, err := fingerprint.ComputeFingerprint(currentStateIR, config.Schema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
-	}
-
+	var currentStateIR *ir.IR
+	var sourceFingerprint *fingerprint.SchemaFingerprint
 	targetMajorVersion := 0
-	if v, ok := strings.CutPrefix(currentStateIR.Metadata.DatabaseVersion, "PostgreSQL "); ok {
-		fmt.Sscanf(v, "%d", &targetMajorVersion)
+	if config.Source != "" { // merp fork patch 4: the current state is a document, no database, no fingerprint
+		currentStateIR, targetMajorVersion, err = currentFromSource(config.Source, config.Schema)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		currentStateIR, err = util.GetIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.SSLMode, config.Schema, config.ApplicationName, ignoreConfig, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current state from database: %w", err)
+		}
+
+		sourceFingerprint, err = fingerprint.ComputeFingerprint(currentStateIR, config.Schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
+		}
+
+		targetMajorVersion = majorVersionOf(currentStateIR)
 	}
 
 	// The fingerprint above is of the database as inspected; the renames below
@@ -58,7 +64,7 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 	}
 
 	diffs := append(renames, diff.GenerateMigrationForTarget(currentStateIR, desiredStateIR, config.Schema, targetMajorVersion)...)
-	p := plan.NewPlanWithFingerprint(diffs, sourceFingerprint, targetMajorVersion, currentStateIR)
+	p := newPlan(config, diffs, sourceFingerprint, targetMajorVersion, currentStateIR)
 	p.Refactor = refactorReport
 	return p, nil
 }

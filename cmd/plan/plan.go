@@ -49,7 +49,7 @@ var PlanCmd = &cobra.Command{
 	Long:         "Generate a migration plan to apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public').",
 	RunE:         runPlan,
 	SilenceUsage: true,
-	PreRunE:      util.PreRunEWithEnvVarsAndConnection(&planDB, &planUser, &planHost, &planPort),
+	PreRunE:      planPreRunE(&planDB, &planUser, &planHost, &planPort), // merp fork: --source needs no connection
 }
 
 func init() {
@@ -81,6 +81,7 @@ func init() {
 	PlanCmd.Flags().StringVar(&outputSQL, "output-sql", "", "Output SQL format to stdout or file path")
 	PlanCmd.Flags().BoolVar(&planNoColor, "no-color", false, "Disable colored output")
 
+	registerMigrateFlags(PlanCmd) // merp fork
 	PlanCmd.MarkFlagRequired("file")
 }
 
@@ -145,6 +146,8 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		PlanDBUser:     planDBUser,
 		PlanDBPassword: finalPlanPassword,
 		PlanDBSSLMode:  planDBSSLMode,
+		Source:         planSource,        // merp fork
+		InTransaction:  planInTransaction, // merp fork
 	}
 
 	// Create desired state provider (embedded postgres or external database)
@@ -194,6 +197,8 @@ type PlanConfig struct {
 	PlanDBPassword string
 	SSLMode        string
 	PlanDBSSLMode  string
+	Source         string // merp fork: a .pgmodel read as the current state
+	InTransaction  bool   // merp fork: plan for one surrounding transaction
 }
 
 // CreateDesiredStateProvider creates either an embedded PostgreSQL instance or connects to an external database
