@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pgplex/pgschema/internal/refactor"
 	"github.com/pgplex/pgschema/ir"
 )
 
@@ -24,14 +25,14 @@ import (
 const SpecVersion = "1.0"
 
 // Document is a .pgmodel: the desired state (Model) plus the envelope fields
-// erp emits. Refactor (rename directives) is not supported by this build and
-// is refused when non-empty. Config is informational: scope comes from the
+// erp emits. Refactor holds the rename directives, applied by inspection
+// (package refactor). Config is informational: scope comes from the
 // invocation's --schema, as for --file, and is never re-applied from here.
 type Document struct {
-	SpecVersion string            `json:"specVersion"`
-	Model       json.RawMessage   `json:"model"`
-	Refactor    []json.RawMessage `json:"refactor,omitempty"`
-	Config      *Config           `json:"config,omitempty"`
+	SpecVersion string           `json:"specVersion"`
+	Model       json.RawMessage  `json:"model"`
+	Refactor    []refactor.Entry `json:"refactor,omitempty"`
+	Config      *Config          `json:"config,omitempty"`
 }
 
 // Config records the scope the document was produced for. It is kept for
@@ -82,8 +83,8 @@ func Parse(data []byte) (*Document, error) {
 	if len(doc.Model) == 0 || bytes.Equal(bytes.TrimSpace(doc.Model), []byte("null")) {
 		return nil, errors.New("invalid .pgmodel: missing model")
 	}
-	if len(doc.Refactor) > 0 {
-		return nil, fmt.Errorf("invalid .pgmodel: %d refactor entries, but rename directives are not supported in this build", len(doc.Refactor))
+	if err := refactor.ValidateAll(doc.Refactor); err != nil {
+		return nil, fmt.Errorf("invalid .pgmodel: %w", err)
 	}
 	if _, err := doc.decodeModel(); err != nil {
 		return nil, err
