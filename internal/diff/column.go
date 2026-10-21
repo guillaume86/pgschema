@@ -141,6 +141,8 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		statements = append(statements, sql)
 	}
 
+	statements = append(statements, columnStorageSQL(cd, qualifiedTableName, targetSchema)...) // merp fork
+
 	return statements
 }
 
@@ -208,6 +210,9 @@ func columnsEqual(old, new *ir.Column, targetSchema string) bool {
 		return false
 	}
 	if old.IsNullable != new.IsNullable {
+		return false
+	}
+	if !columnStorageEqual(old, new) { // merp fork
 		return false
 	}
 	// A NOT NULL constraint that is still NOT VALID must be validated to reach

@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.13.1",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "0b47da24e8ec6d16a69d0b8626900d5070ad969bee5ac0e81100a0f15fa7e4aa"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE blob_chunk ALTER COLUMN bytes SET STORAGE EXTERNAL;",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.blob_chunk.bytes"
+        },
+        {
+          "sql": "ALTER TABLE blob_chunk ALTER COLUMN note SET STORAGE EXTENDED;",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.blob_chunk.note"
+        }
+      ]
+    }
+  ]
+}
