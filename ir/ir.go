@@ -118,6 +118,9 @@ type Column struct {
 	// merely references a shared or custom-named sequence keeps its explicit
 	// DEFAULT (issue #573). Derived during normalization, not serialized.
 	IsSerial bool `json:"-"`
+	// merp fork: the column's storage when it is not its type's default, and that default (ir/column_storage.go).
+	Storage     string `json:"storage,omitempty"`
+	TypeStorage string `json:"-"`
 }
 
 // Identity represents PostgreSQL identity column configuration

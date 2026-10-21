@@ -194,6 +194,10 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, err
 	}
 
+	if err := traced(ctx, "column storage", func(ctx context.Context) error { return i.buildColumnStorage(ctx, schema, targetSchema) }); err != nil { // merp fork
+		return nil, fmt.Errorf("failed to build column storage: %w", err)
+	}
+
 	if err := traced(ctx, "partition parent columns", func(ctx context.Context) error { return i.buildPartitionParentColumns(ctx, schema, targetSchema) }); err != nil {
 		return nil, fmt.Errorf("failed to build partition parent columns: %w", err)
 	}
