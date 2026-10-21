@@ -509,6 +509,7 @@ func generateCreateTablesSQL(
 		}
 
 		collector.collect(context, sql)
+		collectColumnStorageSQL(table.Schema, table.Name, table.Columns, targetSchema, collector) // merp fork
 
 		// Add table comment
 		if table.Comment != "" {
@@ -1408,6 +1409,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 		collector.collect(context, stmt+";")
 	}
+	collectColumnStorageSQL(td.Table.Schema, td.Table.Name, td.AddedColumns, targetSchema, collector) // merp fork
 
 	// Add comments for new columns
 	for _, column := range td.AddedColumns {

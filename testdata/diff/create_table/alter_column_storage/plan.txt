@@ -1,0 +1,16 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ blob_chunk
+    ~ bytes (column)
+    ~ note (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE blob_chunk ALTER COLUMN bytes SET STORAGE EXTERNAL;
+
+ALTER TABLE blob_chunk ALTER COLUMN note SET STORAGE EXTENDED;
