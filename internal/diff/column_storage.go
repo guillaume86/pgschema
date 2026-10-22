@@ -10,21 +10,35 @@ import (
 // merp fork: a column's STORAGE planned as ALTER TABLE … ALTER COLUMN … SET
 // STORAGE (merp#1028; fork/README.md, patch 5; the field is ir/column_storage.go).
 
-// wantedStorage is the storage the desired column asks of the current one, ""
-// for its type's default: a desired storage that names the current type's
-// default asks for nothing, since inspection reports only a storage that
-// differs from it.
-func wantedStorage(old, new *ir.Column) string {
-	if new.Storage != "" && new.Storage == old.TypeStorage {
+// typeStorage is the default storage of the current column's type: what
+// inspection read, else the built-in type's default when the current state is
+// a document (ir.TypeDefaultStorage), else "" (unknown).
+func typeStorage(old *ir.Column) string {
+	if old.TypeStorage != "" {
+		return old.TypeStorage
+	}
+	return ir.TypeDefaultStorage(old.DataType)
+}
+
+// canonicalStorage is storage with a name for the type's default read as the
+// absent storage, "": the default named explicitly equals the default left out.
+func canonicalStorage(storage, typeDefault string) string {
+	if storage != "" && storage == typeDefault {
 		return ""
 	}
-	return new.Storage
+	return storage
+}
+
+// wantedStorage is the storage the desired column asks of the current one, ""
+// for its type's default.
+func wantedStorage(old, new *ir.Column) string {
+	return canonicalStorage(new.Storage, typeStorage(old))
 }
 
 // columnStorageEqual reports whether the current column already has the
 // storage the desired one asks for.
 func columnStorageEqual(old, new *ir.Column) bool {
-	return wantedStorage(old, new) == old.Storage
+	return wantedStorage(old, new) == canonicalStorage(old.Storage, typeStorage(old))
 }
 
 // columnStorageSQL is the SET STORAGE a modified column needs, after its other
@@ -41,12 +55,12 @@ func columnStorageSQL(cd *ColumnDiff, qualifiedTableName, targetSchema string) [
 	switch {
 	case typeChanged:
 		target = cd.New.Storage
-	case want == cd.Old.Storage:
+	case columnStorageEqual(cd.Old, cd.New):
 		return nil
 	case want != "":
 		target = want
-	case cd.Old.TypeStorage != "":
-		target = cd.Old.TypeStorage
+	case typeStorage(cd.Old) != "":
+		target = typeStorage(cd.Old)
 	default:
 		target = "default"
 	}
