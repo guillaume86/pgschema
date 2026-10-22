@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/pgplex/pgschema/cmd/apply"
+	dumpCmd "github.com/pgplex/pgschema/cmd/dump"
 	planCmd "github.com/pgplex/pgschema/cmd/plan"
 	"github.com/pgplex/pgschema/internal/model"
 	"github.com/pgplex/pgschema/ir"
@@ -100,6 +101,34 @@ func TestColumnStorageByModel(t *testing.T) {
 		}
 		if sqlText, changes := planSQL(external, "created-again.json"); changes {
 			t.Errorf("a created column plans nothing:\n%s", sqlText)
+		}
+	})
+
+	t.Run("an added column is created with its storage", func(t *testing.T) {
+		materialize(t, conn, "merp", `CREATE TABLE blob_chunk (id uuid NOT NULL, seq integer NOT NULL,
+			CONSTRAINT blob_chunk_pkey PRIMARY KEY (id, seq));`)
+		sqlText, _ := planSQL(external, "add.json")
+		add := strings.Index(sqlText, "ADD COLUMN bytes")
+		set := strings.Index(sqlText, setExternal)
+		if add < 0 || set < add {
+			t.Fatalf("ADD COLUMN then SET STORAGE:\n%s", sqlText)
+		}
+		run(t, apply.ApplyCmd, append(connArgs, "--file", external, "--auto-approve")...)
+		if got := attstorage(); got != "e" {
+			t.Fatalf("attstorage = %q, want e", got)
+		}
+		if sqlText, changes := planSQL(external, "added-again.json"); changes {
+			t.Errorf("an added column plans nothing:\n%s", sqlText)
+		}
+	})
+
+	t.Run("dump writes the storage after the table", func(t *testing.T) {
+		out, err := dumpCmd.ExecuteDump(&dumpCmd.DumpConfig{Host: host, Port: port, DB: db, User: user, Password: password, SSLMode: "disable", Schema: "merp"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out, setExternal) {
+			t.Errorf("dump lacks %q:\n%s", setExternal, out)
 		}
 	})
 
