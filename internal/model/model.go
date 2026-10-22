@@ -107,6 +107,9 @@ func (d *Document) DesiredState(schema string) (*ir.IR, error) {
 	}
 	desired := &ir.IR{Metadata: model.Metadata, Schemas: map[string]*ir.Schema{schema: s}}
 	fillMaps(s)
+	if err := normalizeStorage(s); err != nil {
+		return nil, err
+	}
 	ir.NormalizeModel(desired)
 	return desired, nil
 }
