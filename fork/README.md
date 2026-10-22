@@ -106,8 +106,13 @@ git diff vOLD vNEW -- cmd/plan/plan.go internal/postgres/desired_state.go ir/ir.
 - A new map field in the IR must be added to `fillMaps` (`internal/model/model.go`), which gives a
   model the non-nil maps the inspector always allocates.
 - A new derived `json:"-"` field that the inspector sets outside `normalizeIR` is absent from a
-  model IR (today `AllConstraintNames` and `PartitionParentColumns`; `IsSerial` is set by
-  normalization). Check whether the differ reads it from the desired side.
+  model IR (today `AllConstraintNames`, `PartitionParentColumns`, and since v1.13.2
+  `Table.AllPartitionChildren`, `Constraint.BackingIndex` and `Index.AttachedPartitions`; `IsSerial`
+  is set by normalization). Check whether the differ reads it from the desired side. The v1.13.2
+  three are read from the desired side only for a partition hierarchy
+  (`planPartitionIndexCreation`, `internal/diff/partition_index.go`), which a merp model never
+  declares, and the serialized `Index.ParentIndex` carries the edge upstream keeps for an IR read
+  from JSON.
 
 ## Rules
 
