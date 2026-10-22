@@ -7,8 +7,8 @@ upstream release is a `git rebase` away.
 
 ## Consumer
 
-The only consumer is merp's ERP (`erp/` in the merp workspace). Its client
-(`erp/src/lib/Pgschema/PgschemaClient.cs`) runs two verbs, `plan` and `apply`, on one schema, with the
+The only consumer is merp's ERP (`merp/` in the merp workspace). Its client
+(`merp/src/lib/Pgschema/PgschemaClient.cs`) runs two verbs, `plan` and `apply`, on one schema, with the
 desired state derived from its module declarations as a `.pgmodel` document. That model holds
 tables, columns, PK/FK/UNIQUE/CHECK constraints and indexes only. Everything else pgschema does
 stays upstream's and is not exercised by merp.
