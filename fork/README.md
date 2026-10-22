@@ -7,8 +7,8 @@ upstream release is a `git rebase` away.
 
 ## Consumer
 
-The only consumer is merp's ERP (`erp/` in the merp workspace). Its client
-(`erp/src/lib/Pgschema/PgschemaClient.cs`) runs two verbs, `plan` and `apply`, on one schema, with the
+The only consumer is merp (`merp/` in the merp workspace). Its client
+(`merp/src/lib/Pgschema/PgschemaClient.cs`) runs two verbs, `plan` and `apply`, on one schema, with the
 desired state derived from its module declarations as a `.pgmodel` document. That model holds
 tables, columns, PK/FK/UNIQUE/CHECK constraints and indexes only. Everything else pgschema does
 stays upstream's and is not exercised by merp.
@@ -89,7 +89,7 @@ git rebase vX.Y.Z                      # the new upstream release tag
 mise x go@1.24 -- go test ./...        # full suite (embedded Postgres; a few minutes)
 ```
 
-Then run erp's gate against the rebased build. On each rebase also read what moved under the
+Then run merp's gate against the rebased build. On each rebase also read what moved under the
 patch:
 
 ```sh
@@ -102,7 +102,7 @@ git diff vOLD vNEW -- cmd/plan/plan.go internal/postgres/desired_state.go ir/ir.
 - `DesiredStateProvider` (`internal/postgres/desired_state.go`): `model.Provider` implements it; a
   new method needs a no-op there.
 - The IR shape (`ir/ir.go` JSON tags): the strict decode rejects documents that use a removed or
-  renamed field; erp's deriver must follow the new shape.
+  renamed field; merp's deriver must follow the new shape.
 - A new map field in the IR must be added to `fillMaps` (`internal/model/model.go`), which gives a
   model the non-nil maps the inspector always allocates.
 - A new derived `json:"-"` field that the inspector sets outside `normalizeIR` is absent from a
