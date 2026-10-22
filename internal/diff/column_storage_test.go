@@ -43,9 +43,25 @@ func TestColumnStorageDiff(t *testing.T) {
 			want: []string{"ALTER TABLE blob_chunk ALTER COLUMN bytes SET STORAGE EXTENDED;"},
 		},
 		{
-			name: "a dropped storage on a document's current state resets to DEFAULT",
+			name: "document against document: the default named equals the default left out",
+			old:  storageColumn("bytea", "", ""),
+			new:  storageColumn("bytea", "extended", ""),
+		},
+		{
+			name: "document against document: the default left out equals the default named",
+			old:  storageColumn("bytea", "extended", ""),
+			new:  storageColumn("bytea", "", ""),
+		},
+		{
+			name: "a dropped storage on a document's current state resets to the built-in type's default",
 			old:  storageColumn("bytea", "external", ""),
 			new:  storageColumn("bytea", "", ""),
+			want: []string{"ALTER TABLE blob_chunk ALTER COLUMN bytes SET STORAGE EXTENDED;"},
+		},
+		{
+			name: "a dropped storage on a document's column of an unknown type resets to DEFAULT",
+			old:  storageColumn("chunk_bytes", "external", ""),
+			new:  storageColumn("chunk_bytes", "", ""),
 			want: []string{"ALTER TABLE blob_chunk ALTER COLUMN bytes SET STORAGE DEFAULT;"},
 		},
 		{

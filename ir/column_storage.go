@@ -3,6 +3,7 @@ package ir
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // merp fork: a column's STORAGE (merp#1028; fork/README.md, patch 5).
@@ -21,6 +22,27 @@ var StorageNames = map[string]string{
 	"e": "external",
 	"x": "extended",
 	"m": "main",
+}
+
+// builtinTypeStorage is pg_type.typstorage of the common built-in types, as
+// Column.DataType names them, for a current state read from a document, which
+// carries no TypeStorage.
+var builtinTypeStorage = map[string]string{
+	"bytea": "extended", "text": "extended", "character varying": "extended", "varchar": "extended",
+	"character": "extended", "json": "extended", "jsonb": "extended", "xml": "extended", "tsvector": "extended",
+	"numeric": "main", "inet": "main", "cidr": "main",
+	"uuid": "plain", "boolean": "plain", "smallint": "plain", "integer": "plain", "bigint": "plain",
+	"real": "plain", "double precision": "plain", "date": "plain", "time without time zone": "plain",
+	"timestamp without time zone": "plain", "timestamp with time zone": "plain", "interval": "plain",
+}
+
+// TypeDefaultStorage is the default storage of a built-in data type, every
+// array's included (extended), or "" for a type it does not know.
+func TypeDefaultStorage(dataType string) string {
+	if strings.HasSuffix(dataType, "[]") {
+		return "extended"
+	}
+	return builtinTypeStorage[dataType]
 }
 
 // IsStorageName reports whether name is one of the words Column.Storage holds.
