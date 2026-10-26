@@ -32,6 +32,7 @@ func groupInOneTransaction(diffs []diff.Diff) []ExecutionGroup {
 				Type:      d.Type.String(),
 				Operation: d.Operation.String(),
 				Path:      d.Path,
+				Facts:     stepFacts(d, stmt.SQL), // patch 6: the step's typed facts (facts.go)
 			})
 		}
 	}

@@ -41,6 +41,8 @@ type Step struct {
 	Type      string `json:"type,omitempty"`      // e.g., "table", "index"
 	Operation string `json:"operation,omitempty"` // e.g., "create", "alter", "drop"
 	Path      string `json:"path,omitempty"`      // e.g., "public.users"
+
+	Facts *StepFacts `json:"facts,omitempty"` // merp fork: what the step does, typed (facts.go)
 }
 
 // ExecutionGroup represents a group of steps that should be executed together
