@@ -105,7 +105,7 @@ func TestPlanFromTwoDocuments(t *testing.T) {
 		}
 	})
 
-	t.Run("the target's refactor block renames against the source document", func(t *testing.T) {
+	t.Run("a plan between two documents renames nothing: an entry whose old object the source holds is refused", func(t *testing.T) {
 		renamed := filepath.Join(dir, "renamed.pgmodel")
 		materialize(t, conn, "merp", strings.ReplaceAll(fullModel, "todo_item", "todo_task"))
 		writeRefactorModel(t, conn, "merp", renamed, []map[string]string{
@@ -115,15 +115,25 @@ func TestPlanFromTwoDocuments(t *testing.T) {
 			{"op": "rename", "kind": "index", "from": "merp.todo_item_priority_idx", "to": "merp.todo_task_priority_idx"},
 		})
 		out := filepath.Join(dir, "renames.json")
-		if err := execute(planCmd.PlanCmd, "--schema", "merp", "--source", full, "--file", renamed, "--in-transaction", "--output-json", out); err != nil {
+		err := execute(planCmd.PlanCmd, "--schema", "merp", "--source", full, "--file", renamed, "--in-transaction", "--output-json", out)
+		want := "refused: rename table merp.todo_item to merp.todo_task: a plan between two documents renames nothing. Nothing was planned."
+		if err == nil || err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, err)
+		}
+		if _, statErr := os.Stat(out); statErr == nil {
+			t.Error("no plan is written")
+		}
+
+		// Old names absent from the source: every entry inert, the diff as without a block.
+		inert := filepath.Join(dir, "inert.json")
+		if err := execute(planCmd.PlanCmd, "--schema", "merp", "--source", renamed, "--file", renamed, "--in-transaction", "--output-json", inert); err != nil {
 			t.Fatal(err)
 		}
-		sql := readPlan(t, out).ToSQL("raw")
-		if !strings.Contains(sql, "ALTER TABLE merp.todo_item RENAME TO todo_task;") || strings.Contains(strings.ToUpper(sql), "DROP") {
-			t.Errorf("the table is renamed, not dropped and created:\n%s", sql)
+		if readPlan(t, inert).HasAnyChanges() {
+			t.Error("a document against itself plans nothing, its renames inert")
 		}
-		if !strings.Contains(readFile(t, out), `"applied": true`) {
-			t.Error("the plan JSON reports the entries as applied")
+		if text := readFile(t, inert); !strings.Contains(text, `"applied": false`) || strings.Contains(text, `"applied": true`) {
+			t.Errorf("the plan JSON reports every entry inert:\n%s", text)
 		}
 	})
 
