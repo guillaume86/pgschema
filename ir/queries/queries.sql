@@ -23,7 +23,7 @@ FROM information_schema.schemata
 WHERE 
     schema_name = $1
     AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND schema_name NOT LIKE 'pg_temp_%'
+    AND (schema_name NOT LIKE 'pg_temp_%' OR to_regnamespace(schema_name) = pg_my_temp_schema()) -- merp fork patch 8: the session's own temp schema
     AND schema_name NOT LIKE 'pg_toast_temp_%';
 
 -- GetTables retrieves all tables in the database with metadata
@@ -68,7 +68,7 @@ LEFT JOIN pg_class c ON c.relname = t.table_name AND c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE
     t.table_schema = $1
-    AND t.table_type IN ('BASE TABLE', 'VIEW')
+    AND (t.table_type IN ('BASE TABLE', 'VIEW') OR (c.relkind IN ('r', 'p') AND n.oid = pg_my_temp_schema())) -- merp fork patch 8: the session's own temp tables report LOCAL TEMPORARY
     AND NOT EXISTS (
         SELECT 1 FROM pg_catalog.pg_depend dep
         WHERE dep.classid = 'pg_catalog.pg_class'::regclass

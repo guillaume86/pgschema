@@ -2463,7 +2463,7 @@ func (i *Inspector) validateSchemaExists(ctx context.Context, schemaName string)
 		FROM information_schema.schemata 
 		WHERE schema_name = $1
 		  AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-		  AND schema_name NOT LIKE 'pg_temp_%'
+		  AND (schema_name NOT LIKE 'pg_temp_%' OR to_regnamespace(schema_name) = pg_my_temp_schema()) -- merp fork patch 8: the session's own temp schema
 		  AND schema_name NOT LIKE 'pg_toast_temp_%'`
 
 	var exists int
