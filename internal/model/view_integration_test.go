@@ -17,10 +17,11 @@ import (
 	"github.com/pgplex/pgschema/testutil"
 )
 
-// merp fork, patch 7 (viewdef.go, merp#1846): a .pgmodel view whose definition
-// is a hand-written SELECT, which pg_get_viewdef renders in another text
-// (the alias qualifier dropped, literals cast, BETWEEN, IN and LIKE spelled
-// out), converges: applied, then planned again, it plans nothing.
+// merp fork, patch 8 (materialize.go, merp#1850): a .pgmodel view whose
+// definition is a hand-written SELECT, which pg_get_viewdef renders in another
+// text (the alias qualifier dropped, literals cast, BETWEEN, IN and LIKE
+// spelled out), converges: applied, then planned again, it plans nothing. A
+// plan that replaces it carries the author's text.
 const saleTable = `CREATE TABLE tests_reporting_sale (id uuid PRIMARY KEY, tenant uuid NOT NULL, region text NOT NULL,
 	amount numeric NOT NULL, cost numeric NOT NULL, sold_on timestamptz NOT NULL, sold_day date NOT NULL, code varchar(10));`
 
@@ -108,7 +109,7 @@ func TestHandWrittenViewsConvergeByModel(t *testing.T) {
 		path := filepath.Join(dir, "column.pgmodel")
 		writeViewModel(t, conn, "merp", path, "", with("sale_total", strings.Replace(saleTotal, " as margin", " as margin,\n       max(s.amount) as top", 1)))
 		sqlText, _ := planSQL(path, "column.json")
-		if strings.Count(sqlText, ";") != 1 || !strings.Contains(sqlText, "CREATE OR REPLACE VIEW sale_total") || !strings.Contains(sqlText, "AS top") {
+		if strings.Count(sqlText, ";") != 1 || !strings.Contains(sqlText, "CREATE OR REPLACE VIEW sale_total") || !strings.Contains(sqlText, "max(s.amount) as top") {
 			t.Errorf("one CREATE OR REPLACE VIEW sale_total with the new column:\n%s", sqlText)
 		}
 	})
