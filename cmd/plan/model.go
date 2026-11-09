@@ -54,6 +54,11 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 		}
 
 		targetMajorVersion = majorVersionOf(currentStateIR)
+
+		// merp fork patch 8: a view the target holds is compared as the server renders it (materialize.go)
+		if desiredStateIR, err = materializeDesired(config, currentStateIR, desiredStateIR, targetMajorVersion); err != nil {
+			return nil, err
+		}
 	}
 
 	// The fingerprint above is of the database as inspected; the renames below
