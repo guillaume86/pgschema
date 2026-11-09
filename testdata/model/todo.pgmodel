@@ -1,0 +1,2128 @@
+{
+  "specVersion": "1.0",
+  "model": {
+    "metadata": {
+      "database_version": "PostgreSQL 18"
+    },
+    "schemas": {
+      "merp": {
+        "name": "merp",
+        "owner": "",
+        "tables": {
+          "access_browser_session": {
+            "schema": "merp",
+            "name": "access_browser_session",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "hash",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "expires_at",
+                "position": 4,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "revoked_at",
+                "position": 5,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "created_at",
+                "position": 6,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "user",
+                "position": 7,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "access_browser_session_pkey": {
+                "schema": "merp",
+                "table": "access_browser_session",
+                "name": "access_browser_session_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_browser_session_tenant_fkey": {
+                "schema": "merp",
+                "table": "access_browser_session",
+                "name": "access_browser_session_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_browser_session_tenant_hash_key": {
+                "schema": "merp",
+                "table": "access_browser_session",
+                "name": "access_browser_session_tenant_hash_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  },
+                  {
+                    "name": "hash",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_browser_session_user_fkey": {
+                "schema": "merp",
+                "table": "access_browser_session",
+                "name": "access_browser_session_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_browser_session_tenant_idx": {
+                "schema": "merp",
+                "table": "access_browser_session",
+                "name": "access_browser_session_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_identity": {
+            "schema": "merp",
+            "name": "access_identity",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "issuer",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "subject",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "mapped_at",
+                "position": 4,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "user",
+                "position": 5,
+                "data_type": "uuid",
+                "is_nullable": true
+              },
+              {
+                "name": "mapped_by",
+                "position": 6,
+                "data_type": "uuid",
+                "is_nullable": true
+              }
+            ],
+            "constraints": {
+              "access_identity_issuer_subject_key": {
+                "schema": "merp",
+                "table": "access_identity",
+                "name": "access_identity_issuer_subject_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "issuer",
+                    "position": 1
+                  },
+                  {
+                    "name": "subject",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_identity_mapped_by_fkey": {
+                "schema": "merp",
+                "table": "access_identity",
+                "name": "access_identity_mapped_by_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "mapped_by",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_identity_pkey": {
+                "schema": "merp",
+                "table": "access_identity",
+                "name": "access_identity_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_identity_user_fkey": {
+                "schema": "merp",
+                "table": "access_identity",
+                "name": "access_identity_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_invitation": {
+            "schema": "merp",
+            "name": "access_invitation",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "hash",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "expires_at",
+                "position": 4,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "accepted_at",
+                "position": 5,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "created_at",
+                "position": 6,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "user",
+                "position": 7,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "invited_by",
+                "position": 8,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "access_invitation_invited_by_fkey": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_invited_by_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "invited_by",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_invitation_pkey": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_invitation_tenant_fkey": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_invitation_tenant_hash_key": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_tenant_hash_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  },
+                  {
+                    "name": "hash",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_invitation_tenant_user_key": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_tenant_user_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  },
+                  {
+                    "name": "user",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_invitation_user_fkey": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_invitation_tenant_idx": {
+                "schema": "merp",
+                "table": "access_invitation",
+                "name": "access_invitation_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_personal_access_token": {
+            "schema": "merp",
+            "name": "access_personal_access_token",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "name",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "hash",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "expires_at",
+                "position": 5,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "revoked_at",
+                "position": 6,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "last_used_at",
+                "position": 7,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "created_at",
+                "position": 8,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "user",
+                "position": 9,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "access_personal_access_token_pkey": {
+                "schema": "merp",
+                "table": "access_personal_access_token",
+                "name": "access_personal_access_token_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_personal_access_token_tenant_fkey": {
+                "schema": "merp",
+                "table": "access_personal_access_token",
+                "name": "access_personal_access_token_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_personal_access_token_tenant_hash_key": {
+                "schema": "merp",
+                "table": "access_personal_access_token",
+                "name": "access_personal_access_token_tenant_hash_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  },
+                  {
+                    "name": "hash",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_personal_access_token_user_fkey": {
+                "schema": "merp",
+                "table": "access_personal_access_token",
+                "name": "access_personal_access_token_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_personal_access_token_tenant_idx": {
+                "schema": "merp",
+                "table": "access_personal_access_token",
+                "name": "access_personal_access_token_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_role": {
+            "schema": "merp",
+            "name": "access_role",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "access_role_name_key": {
+                "schema": "merp",
+                "table": "access_role",
+                "name": "access_role_name_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_role_pkey": {
+                "schema": "merp",
+                "table": "access_role",
+                "name": "access_role_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_role_label_idx": {
+                "schema": "merp",
+                "table": "access_role",
+                "name": "access_role_label_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "id",
+                    "position": 2,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_user": {
+            "schema": "merp",
+            "name": "access_user",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "login",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "name",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "email",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "active",
+                "position": 5,
+                "data_type": "boolean",
+                "is_nullable": false,
+                "default_value": "true"
+              }
+            ],
+            "constraints": {
+              "access_user_login_key": {
+                "schema": "merp",
+                "table": "access_user",
+                "name": "access_user_login_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "login",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_user_pkey": {
+                "schema": "merp",
+                "table": "access_user",
+                "name": "access_user_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_user_label_idx": {
+                "schema": "merp",
+                "table": "access_user",
+                "name": "access_user_label_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "id",
+                    "position": 2,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "access_user_role": {
+            "schema": "merp",
+            "name": "access_user_role",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": true
+              },
+              {
+                "name": "user",
+                "position": 3,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "role",
+                "position": 4,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "access_user_role_pkey": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_user_role_role_fkey": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_role_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "role",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_role",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_user_role_tenant_fkey": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "access_user_role_user_fkey": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "access_user_role_tenant_idx": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              },
+              "access_user_role_tenant_user_role_key": {
+                "schema": "merp",
+                "table": "access_user_role",
+                "name": "access_user_role_tenant_user_role_key",
+                "type": "UNIQUE",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "\"user\"",
+                    "position": 2,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "role",
+                    "position": 3,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false,
+                "nulls_not_distinct": true
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_blob": {
+            "schema": "merp",
+            "name": "merp_blob",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "digest",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "size",
+                "position": 3,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "mime",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "state",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "provider",
+                "position": 6,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "key",
+                "position": 7,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "created_at",
+                "position": 8,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_blob_pkey": {
+                "schema": "merp",
+                "table": "merp_blob",
+                "name": "merp_blob_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "merp_blob_digest_key": {
+                "schema": "merp",
+                "table": "merp_blob",
+                "name": "merp_blob_digest_key",
+                "type": "UNIQUE",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "digest",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": true,
+                "is_expression": false,
+                "where": "(state <> 'doomed'::text)"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_blob_chunk": {
+            "schema": "merp",
+            "name": "merp_blob_chunk",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "seq",
+                "position": 2,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "bytes",
+                "position": 3,
+                "data_type": "bytea",
+                "is_nullable": false,
+                "storage": "external"
+              },
+              {
+                "name": "blob",
+                "position": 4,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_blob_chunk_blob_fkey": {
+                "schema": "merp",
+                "table": "merp_blob_chunk",
+                "name": "merp_blob_chunk_blob_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "blob",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "merp_blob",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "merp_blob_chunk_blob_seq_key": {
+                "schema": "merp",
+                "table": "merp_blob_chunk",
+                "name": "merp_blob_chunk_blob_seq_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "blob",
+                    "position": 1
+                  },
+                  {
+                    "name": "seq",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "merp_blob_chunk_pkey": {
+                "schema": "merp",
+                "table": "merp_blob_chunk",
+                "name": "merp_blob_chunk_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_outbox": {
+            "schema": "merp",
+            "name": "merp_outbox",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "event",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "context",
+                "position": 3,
+                "data_type": "jsonb",
+                "is_nullable": false
+              },
+              {
+                "name": "payload",
+                "position": 4,
+                "data_type": "jsonb",
+                "is_nullable": false
+              },
+              {
+                "name": "emitted_at",
+                "position": 5,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "attempts",
+                "position": 6,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "0"
+              },
+              {
+                "name": "delivered_at",
+                "position": 7,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "failed_reason",
+                "position": 8,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "system",
+                "position": 9,
+                "data_type": "boolean",
+                "is_nullable": false,
+                "default_value": "false"
+              }
+            ],
+            "constraints": {
+              "merp_outbox_pkey": {
+                "schema": "merp",
+                "table": "merp_outbox",
+                "name": "merp_outbox_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "merp_outbox_delivered_at_emitted_at_idx": {
+                "schema": "merp",
+                "table": "merp_outbox",
+                "name": "merp_outbox_delivered_at_emitted_at_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "delivered_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "emitted_at",
+                    "position": 2,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_release": {
+            "schema": "merp",
+            "name": "merp_release",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "module",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "version",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "step",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "compose_hash",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "rows",
+                "position": 6,
+                "data_type": "integer",
+                "is_nullable": true
+              },
+              {
+                "name": "at",
+                "position": 7,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_release_pkey": {
+                "schema": "merp",
+                "table": "merp_release",
+                "name": "merp_release_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "merp_release_module_version_step_key": {
+                "schema": "merp",
+                "table": "merp_release",
+                "name": "merp_release_module_version_step_key",
+                "type": "UNIQUE",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "module",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "version",
+                    "position": 2,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "step",
+                    "position": 3,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false,
+                "nulls_not_distinct": true
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_schedule_tick": {
+            "schema": "merp",
+            "name": "merp_schedule_tick",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "schedule",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "tick",
+                "position": 3,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "claimed_at",
+                "position": 4,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_schedule_tick_pkey": {
+                "schema": "merp",
+                "table": "merp_schedule_tick",
+                "name": "merp_schedule_tick_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "merp_schedule_tick_schedule_key": {
+                "schema": "merp",
+                "table": "merp_schedule_tick",
+                "name": "merp_schedule_tick_schedule_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "schedule",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_sequence": {
+            "schema": "merp",
+            "name": "merp_sequence",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "scope",
+                "position": 3,
+                "data_type": "jsonb",
+                "is_nullable": false
+              },
+              {
+                "name": "period",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "value",
+                "position": 5,
+                "data_type": "bigint",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_sequence_pkey": {
+                "schema": "merp",
+                "table": "merp_sequence",
+                "name": "merp_sequence_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "merp_sequence_name_scope_period_key": {
+                "schema": "merp",
+                "table": "merp_sequence",
+                "name": "merp_sequence_name_scope_period_key",
+                "type": "UNIQUE",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "scope",
+                    "position": 2,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "period",
+                    "position": 3,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false,
+                "nulls_not_distinct": true
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "merp_upload": {
+            "schema": "merp",
+            "name": "merp_upload",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "token_hash",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "actor",
+                "position": 3,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "for_member",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "file_name",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "expires_at",
+                "position": 6,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "consumed_at",
+                "position": 7,
+                "data_type": "timestamptz",
+                "is_nullable": true
+              },
+              {
+                "name": "blob",
+                "position": 8,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "merp_upload_blob_fkey": {
+                "schema": "merp",
+                "table": "merp_upload",
+                "name": "merp_upload_blob_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "blob",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "merp_blob",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "merp_upload_pkey": {
+                "schema": "merp",
+                "table": "merp_upload",
+                "name": "merp_upload_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "tenancy_membership": {
+            "schema": "merp",
+            "name": "tenancy_membership",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "user",
+                "position": 3,
+                "data_type": "uuid",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "tenancy_membership_pkey": {
+                "schema": "merp",
+                "table": "tenancy_membership",
+                "name": "tenancy_membership_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "tenancy_membership_tenant_fkey": {
+                "schema": "merp",
+                "table": "tenancy_membership",
+                "name": "tenancy_membership_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "tenancy_membership_tenant_user_key": {
+                "schema": "merp",
+                "table": "tenancy_membership",
+                "name": "tenancy_membership_tenant_user_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  },
+                  {
+                    "name": "user",
+                    "position": 2
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "tenancy_membership_user_fkey": {
+                "schema": "merp",
+                "table": "tenancy_membership",
+                "name": "tenancy_membership_user_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "user",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "tenancy_membership_tenant_idx": {
+                "schema": "merp",
+                "table": "tenancy_membership",
+                "name": "tenancy_membership_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "tenancy_tenant": {
+            "schema": "merp",
+            "name": "tenancy_tenant",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "active",
+                "position": 3,
+                "data_type": "boolean",
+                "is_nullable": false,
+                "default_value": "true"
+              }
+            ],
+            "constraints": {
+              "tenancy_tenant_name_key": {
+                "schema": "merp",
+                "table": "tenancy_tenant",
+                "name": "tenancy_tenant_name_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "tenancy_tenant_pkey": {
+                "schema": "merp",
+                "table": "tenancy_tenant",
+                "name": "tenancy_tenant_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "tenancy_tenant_label_idx": {
+                "schema": "merp",
+                "table": "tenancy_tenant",
+                "name": "tenancy_tenant_label_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "name",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "id",
+                    "position": 2,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "todo_todo_item": {
+            "schema": "merp",
+            "name": "todo_todo_item",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "tenant",
+                "position": 2,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "created_at",
+                "position": 3,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "updated_at",
+                "position": 4,
+                "data_type": "timestamptz",
+                "is_nullable": false
+              },
+              {
+                "name": "created_by",
+                "position": 5,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "updated_by",
+                "position": 6,
+                "data_type": "uuid",
+                "is_nullable": false
+              },
+              {
+                "name": "rank",
+                "position": 7,
+                "data_type": "numeric",
+                "is_nullable": false
+              },
+              {
+                "name": "title",
+                "position": 8,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "done",
+                "position": 9,
+                "data_type": "boolean",
+                "is_nullable": false,
+                "default_value": "false"
+              },
+              {
+                "name": "due_date",
+                "position": 10,
+                "data_type": "date",
+                "is_nullable": true
+              },
+              {
+                "name": "notes",
+                "position": 11,
+                "data_type": "text",
+                "is_nullable": true
+              }
+            ],
+            "constraints": {
+              "todo_todo_item_created_by_fkey": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_created_by_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "created_by",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "todo_todo_item_pkey": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "todo_todo_item_tenant_fkey": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_tenant_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "tenancy_tenant",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              },
+              "todo_todo_item_updated_by_fkey": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_updated_by_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "updated_by",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "merp",
+                "referenced_table": "access_user",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION",
+                "is_valid": true,
+                "no_inherit": true
+              }
+            },
+            "indexes": {
+              "todo_todo_item_tenant_idx": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_tenant_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              },
+              "todo_todo_item_tenant_rank_id_idx": {
+                "schema": "merp",
+                "table": "todo_todo_item",
+                "name": "todo_todo_item_tenant_rank_id_idx",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "tenant",
+                    "position": 1,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "rank",
+                    "position": 2,
+                    "direction": "ASC"
+                  },
+                  {
+                    "name": "id",
+                    "position": 3,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "rls_forced": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          }
+        },
+        "views": {},
+        "functions": {},
+        "procedures": {},
+        "aggregates": {},
+        "sequences": {},
+        "types": {}
+      }
+    }
+  },
+  "config": {
+    "schema": "merp"
+  },
+  "refactor": [
+    {
+      "op": "rename",
+      "kind": "column",
+      "from": "merp.merp_sequence.sequence",
+      "to": "merp.merp_sequence.name"
+    },
+    {
+      "op": "rename",
+      "kind": "index",
+      "from": "merp.merp_sequence_sequence_scope_period_key",
+      "to": "merp.merp_sequence_name_scope_period_key"
+    }
+  ]
+}
