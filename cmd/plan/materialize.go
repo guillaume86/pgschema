@@ -1,0 +1,68 @@
+package plan
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/pgplex/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/internal/model"
+	"github.com/pgplex/pgschema/ir"
+)
+
+// This file is patch 8 of the merp fork (see fork/README.md and
+// internal/model/materialize.go): a database plan from a .pgmodel compares a
+// view as the server renders it on both sides.
+
+// materializeDesired is the desired state a database plan from a .pgmodel
+// diffs: the document's IR as it is, unless the current state holds a view
+// the document names too (model.TextBearing); then the document materialized
+// in the target's session (MaterializeDesired), each view carrying the
+// author's text wherever its rendering differs from the current one
+// (model.AuthorText). A plan between two documents (--source) never comes
+// here.
+func materializeDesired(config *PlanConfig, current, desired *ir.IR, targetMajorVersion int) (*ir.IR, error) {
+	if !model.TextBearing(current, desired, config.Schema) {
+		return desired, nil
+	}
+	materialized, err := MaterializeDesired(config, desired, targetMajorVersion)
+	if err != nil {
+		return nil, err
+	}
+	model.AuthorText(materialized, desired, current, config.Schema)
+	return materialized, nil
+}
+
+// MaterializeDesired opens one connection to the target config names, creates
+// desired there as the session's temporary objects, inspects them
+// (model.Materialize) and remaps the temporary schema to config.Schema with
+// upstream's normalizeSchemaNames, the remap of a plan database's temporary
+// schema. Closing the connection drops what it made. Exported for the fork's
+// invariant fact (internal/model, TestDocumentIrEqualsInspectedIr).
+func MaterializeDesired(config *PlanConfig, desired *ir.IR, targetMajorVersion int) (*ir.IR, error) {
+	sslmode := config.SSLMode
+	if sslmode == "" {
+		sslmode = "prefer"
+	}
+	db, err := util.Connect(&util.ConnectionConfig{
+		Host:            config.Host,
+		Port:            config.Port,
+		Database:        config.DB,
+		User:            config.User,
+		Password:        config.Password,
+		SSLMode:         sslmode,
+		ApplicationName: config.ApplicationName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("materialize the desired state: %w", err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
+	materialized, temp, err := model.Materialize(context.Background(), db, desired, config.Schema, targetMajorVersion)
+	if err != nil {
+		return nil, err
+	}
+	normalizeSchemaNames(materialized, temp, config.Schema)
+	return materialized, nil
+}
