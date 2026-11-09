@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/pgplex/pgschema/cmd/util"
@@ -36,10 +37,16 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 
 	var currentStateIR *ir.IR
 	var sourceFingerprint *fingerprint.SchemaFingerprint
+	var renames []diff.Diff
+	var refactorReport json.RawMessage
 	targetMajorVersion := 0
 	if config.Source != "" { // merp fork patch 4: the current state is a document, no database, no fingerprint
 		currentStateIR, targetMajorVersion, err = currentFromSource(config.Source, config.Schema)
 		if err != nil {
+			return nil, err
+		}
+		// merp fork patch 3: a plan between two documents renames nothing (refactor.go)
+		if refactorReport, err = refuseRenames(source, currentStateIR, config.Schema); err != nil {
 			return nil, err
 		}
 	} else {
@@ -55,17 +62,15 @@ func generatePlanFromIR(config *PlanConfig, source desiredIRSource) (*plan.Plan,
 
 		targetMajorVersion = majorVersionOf(currentStateIR)
 
-		// merp fork patch 8: a view the target holds is compared as the server renders it (materialize.go)
-		if desiredStateIR, err = materializeDesired(config, currentStateIR, desiredStateIR, targetMajorVersion); err != nil {
+		// merp fork patches 3 and 8: the renames run in the plan's session and
+		// the catalogue is read back (refactor.go); a view the target holds is
+		// compared as the server renders it (materialize.go). The fingerprint
+		// above stays the committed catalogue's.
+		s, err := planInSession(config, source, ignoreConfig, currentStateIR, desiredStateIR, targetMajorVersion)
+		if err != nil {
 			return nil, err
 		}
-	}
-
-	// The fingerprint above is of the database as inspected; the renames below
-	// move the in-memory copy the differ reads.
-	renames, refactorReport, err := applyRefactor(source, currentStateIR, config.Schema)
-	if err != nil {
-		return nil, err
+		currentStateIR, desiredStateIR, renames, refactorReport = s.current, s.desired, s.renames, s.report
 	}
 
 	diffs := append(renames, diff.GenerateMigrationForTarget(currentStateIR, desiredStateIR, config.Schema, targetMajorVersion)...)

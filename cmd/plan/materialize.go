@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/pgplex/pgschema/cmd/util"
@@ -16,15 +17,23 @@ import (
 // materializeDesired is the desired state a database plan from a .pgmodel
 // diffs: the document's IR as it is, unless the current state holds a view
 // the document names too (model.TextBearing); then the document materialized
-// in the target's session (MaterializeDesired), each view carrying the
-// author's text wherever its rendering differs from the current one
-// (model.AuthorText). A plan between two documents (--source) never comes
+// in the target's session, each view carrying the author's text wherever its
+// rendering differs from the current one (model.AuthorText). session is the
+// plan's session when patch 3 opened one for the renames (refactor.go), the
+// materialization running there inside its transaction; nil, it opens its own
+// (MaterializeDesired). A plan between two documents (--source) never comes
 // here.
-func materializeDesired(config *PlanConfig, current, desired *ir.IR, targetMajorVersion int) (*ir.IR, error) {
+func materializeDesired(config *PlanConfig, session *sql.DB, current, desired *ir.IR, targetMajorVersion int) (*ir.IR, error) {
 	if !model.TextBearing(current, desired, config.Schema) {
 		return desired, nil
 	}
-	materialized, err := MaterializeDesired(config, desired, targetMajorVersion)
+	var materialized *ir.IR
+	var err error
+	if session == nil {
+		materialized, err = MaterializeDesired(config, desired, targetMajorVersion)
+	} else {
+		materialized, err = materializeIn(session, desired, config.Schema, targetMajorVersion)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -32,13 +41,37 @@ func materializeDesired(config *PlanConfig, current, desired *ir.IR, targetMajor
 	return materialized, nil
 }
 
-// MaterializeDesired opens one connection to the target config names, creates
-// desired there as the session's temporary objects, inspects them
-// (model.Materialize) and remaps the temporary schema to config.Schema with
-// upstream's normalizeSchemaNames, the remap of a plan database's temporary
-// schema. Closing the connection drops what it made. Exported for the fork's
-// invariant fact (internal/model, TestDocumentIrEqualsInspectedIr).
+// MaterializeDesired opens one session on the target config names and
+// materializes desired there (materializeIn). Closing the connection drops
+// what it made. Exported for the fork's invariant fact (internal/model,
+// TestDocumentIrEqualsInspectedIr).
 func MaterializeDesired(config *PlanConfig, desired *ir.IR, targetMajorVersion int) (*ir.IR, error) {
+	db, err := openSession(config)
+	if err != nil {
+		return nil, fmt.Errorf("materialize the desired state: %w", err)
+	}
+	defer db.Close()
+	return materializeIn(db, desired, config.Schema, targetMajorVersion)
+}
+
+// materializeIn creates desired in the session db holds as its temporary
+// objects, inspects them (model.Materialize) and remaps the temporary schema
+// to schema with upstream's normalizeSchemaNames, the remap of a plan
+// database's temporary schema.
+func materializeIn(db *sql.DB, desired *ir.IR, schema string, targetMajorVersion int) (*ir.IR, error) {
+	materialized, temp, err := model.Materialize(context.Background(), db, desired, schema, targetMajorVersion)
+	if err != nil {
+		return nil, err
+	}
+	normalizeSchemaNames(materialized, temp, schema)
+	stripSchemaFromViews(materialized, schema)
+	return materialized, nil
+}
+
+// openSession opens one session on the target config names: a pool of one
+// connection, so every statement and every query of the inspector, its
+// concurrent groups included, reaches the same backend.
+func openSession(config *PlanConfig) (*sql.DB, error) {
 	sslmode := config.SSLMode
 	if sslmode == "" {
 		sslmode = "prefer"
@@ -53,19 +86,11 @@ func MaterializeDesired(config *PlanConfig, desired *ir.IR, targetMajorVersion i
 		ApplicationName: config.ApplicationName,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("materialize the desired state: %w", err)
-	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-
-	materialized, temp, err := model.Materialize(context.Background(), db, desired, config.Schema, targetMajorVersion)
-	if err != nil {
 		return nil, err
 	}
-	normalizeSchemaNames(materialized, temp, config.Schema)
-	stripSchemaFromViews(materialized, config.Schema)
-	return materialized, nil
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	return db, nil
 }
 
 // stripSchemaFromViews renders each materialized view's reference to schema as
