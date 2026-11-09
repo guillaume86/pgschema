@@ -128,6 +128,29 @@ func TestHandWrittenViewsConvergeByModel(t *testing.T) {
 			t.Errorf("the replaced view plans nothing again:\n%s", sqlText)
 		}
 	})
+
+	// merp#1860: a relation the target holds and the document does not (a
+	// foreign table merp makes before the first plan) renders qualified in the
+	// session, where the view sits in pg_temp_N, and unqualified on the target.
+	t.Run("a SELECT over a relation the document does not hold converges once applied", func(t *testing.T) {
+		exec(t, conn, `CREATE FOREIGN DATA WRAPPER tests_ledger; CREATE SERVER tests_ledger FOREIGN DATA WRAPPER tests_ledger;
+			CREATE FOREIGN TABLE merp.tests_ledger_sale (tenant uuid NOT NULL, region text NOT NULL, amount numeric NOT NULL) SERVER tests_ledger;`)
+		ledger := map[string]string{"sale_ledger": `select l.tenant, l.region, sum(l.amount) as total
+from tests_ledger_sale l
+group by l.tenant, l.region`}
+		for n, d := range views {
+			ledger[n] = d
+		}
+		path := filepath.Join(dir, "ledger.pgmodel")
+		writeViewModel(t, conn, "merp", path, "", ledger)
+		if sqlText, _ := planSQL(path, "ledger.json"); !strings.Contains(sqlText, "CREATE OR REPLACE VIEW sale_ledger") || strings.Contains(sqlText, "tests_ledger_sale (") {
+			t.Fatalf("the view created over the target's foreign table, the table left alone:\n%s", sqlText)
+		}
+		run(t, apply.ApplyCmd, append(connArgs, "--file", path, "--auto-approve")...)
+		if sqlText, changes := planSQL(path, "ledger-again.json"); changes {
+			t.Errorf("a view over a relation the document does not hold plans nothing again:\n%s", sqlText)
+		}
+	})
 }
 
 // writeViewModel inspects schema, adds a column to tests_reporting_sale when
