@@ -1,8 +1,10 @@
 // Package refactor reads the rename directives of a .pgmodel's "refactor"
-// block and applies them by inspection: the merp fork's rename patch (see
+// block and decides each by inspection: the merp fork's rename patch (see
 // fork/README.md). The engine renames exactly what the block lists and infers
 // nothing: no cascade to a constraint or an index that is not listed, no
-// guess from a drop and an add of equal shape.
+// guess from a drop and an add of equal shape. It never rewrites what a rename
+// changes in a stored expression: the plan runs the statements in its session
+// and reads the catalogue back (cmd/plan/refactor.go).
 package refactor
 
 import (

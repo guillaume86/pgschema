@@ -118,46 +118,48 @@ func TestApplyRenamesExactlyWhatTheBlockLists(t *testing.T) {
 	if step.Indexes["todo_step_label_idx"] == nil || step.Indexes["todo_subtask_label_idx"] != nil {
 		t.Error("the listed index is not renamed")
 	}
-	for _, c := range step.Constraints {
-		if c.Table != "todo_step" {
-			t.Errorf("constraint %s still names table %s", c.Name, c.Table)
-		}
-	}
-	for _, i := range step.Indexes {
-		if i.Table != "todo_step" {
-			t.Errorf("index %s still names table %s", i.Name, i.Table)
-		}
-	}
-	if got := s.Tables["todo_attachment"].Constraints["todo_attachment_subtask_fkey"].ReferencedTable; got != "todo_step" {
-		t.Errorf("a foreign key into the renamed table must follow it, references %s", got)
-	}
 }
 
-func TestApplyColumnRenameFollowsTheNamesPostgresRewrites(t *testing.T) {
+func TestApplyMovesNamesOnlyAndRewritesNoExpression(t *testing.T) {
+	// What a rename changes in a stored expression is the server's to say,
+	// read back from the plan's session; the engine rewrites none of it.
 	in := current()
-	sqls(t, []Entry{rename(KindColumn, "merp.todo_todo_item.notes", "merp.todo_todo_item.description")}, in)
+	sqls(t, []Entry{
+		rename(KindColumn, "merp.todo_todo_item.notes", "merp.todo_todo_item.description"),
+		rename(KindTable, "merp.todo_subtask", "merp.todo_step"),
+	}, in)
 	item := in.Schemas["merp"].Tables["todo_todo_item"]
 	if item.Columns[1].Name != "description" {
 		t.Errorf("column not renamed: %s", item.Columns[1].Name)
 	}
-	if got := item.Constraints["todo_todo_item_notes_chk"].CheckClause; got != `(char_length(description) < 20 AND description <> 'notes')` {
-		t.Errorf("check clause: identifier renamed, literal left alone; got %s", got)
+	if got := item.Constraints["todo_todo_item_notes_chk"].CheckClause; got != `(char_length(notes) < 20 AND notes <> 'notes')` {
+		t.Errorf("the check clause is left as inspected, got %s", got)
 	}
-	idx := item.Indexes["todo_todo_item_notes_idx"]
-	if idx.Columns[0].Name != "description" || idx.Where != "(description IS NOT NULL)" {
-		t.Errorf("index not rewritten: %v %s", idx.Columns[0].Name, idx.Where)
+	if got := item.Indexes["todo_todo_item_notes_idx"].Where; got != "(notes IS NOT NULL)" {
+		t.Errorf("the index predicate is left as inspected, got %s", got)
 	}
-	if item.Constraints["todo_todo_item_notes_chk"].Name != "todo_todo_item_notes_chk" {
-		t.Error("a constraint named after the column keeps its name unless listed")
+	if got := in.Schemas["merp"].Tables["todo_attachment"].Constraints["todo_attachment_subtask_fkey"].ReferencedTable; got != "todo_subtask" {
+		t.Errorf("a foreign key into the renamed table is left as inspected, references %s", got)
 	}
 }
 
-func TestApplyColumnRenameFollowsAForeignKeyReferencingIt(t *testing.T) {
+func TestRefuseOnDocumentRenamesNothing(t *testing.T) {
+	e := rename(KindTable, "merp.todo_subtask", "merp.todo_step")
+	_, err := RefuseOnDocument(current(), "merp", []Entry{e})
+	want := "refused: rename table merp.todo_subtask to merp.todo_step: a plan between two documents renames nothing. Nothing was planned."
+	if err == nil || err.Error() != want {
+		t.Errorf("want %q, got %v", want, err)
+	}
+	// Old and new both present: the same refusal, not both-exist.
+	_, err = RefuseOnDocument(current(), "merp", []Entry{rename(KindTable, "merp.todo_subtask", "merp.todo_attachment")})
+	if err == nil || !strings.Contains(err.Error(), "renames nothing") {
+		t.Errorf("want the document refusal, got %v", err)
+	}
+
 	in := current()
-	sqls(t, []Entry{rename(KindColumn, "merp.todo_subtask.id", "merp.todo_subtask.key")}, in)
-	fk := in.Schemas["merp"].Tables["todo_attachment"].Constraints["todo_attachment_subtask_fkey"]
-	if fk.ReferencedColumns[0].Name != "key" {
-		t.Errorf("referenced column: %s", fk.ReferencedColumns[0].Name)
+	results, err := RefuseOnDocument(in, "merp", []Entry{rename(KindTable, "merp.todo_gone", "merp.todo_subtask"), rename(KindColumn, "merp.todo_todo_item.gone", "merp.todo_todo_item.there")})
+	if err != nil || len(results) != 2 || results[0].Applied || results[1].Applied {
+		t.Errorf("old absent: inert, got %+v %v", results, err)
 	}
 }
 
@@ -261,21 +263,6 @@ func TestValidateRefusesByName(t *testing.T) {
 		err := c.e.Validate()
 		if err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%+v: want %q, got %v", c.e, c.want, err)
-		}
-	}
-}
-
-func TestReplaceIdent(t *testing.T) {
-	cases := [][3]string{
-		{`(notes IS NOT NULL)`, `notes`, `description`},
-		{`notes_x = 1 AND x_notes = 2`, `notes`, `notes`},
-		{`t.notes = 'it''s notes'`, `notes`, `description`},
-		{`("notes" > 1)`, `notes`, `description`},
-	}
-	want := []string{`(description IS NOT NULL)`, `notes_x = 1 AND x_notes = 2`, `t.description = 'it''s notes'`, `("description" > 1)`}
-	for i, c := range cases {
-		if got := replaceIdent(c[0], c[1], c[2]); got != want[i] {
-			t.Errorf("%s: got %s want %s", c[0], got, want[i])
 		}
 	}
 }

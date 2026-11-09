@@ -8,15 +8,35 @@ import (
 )
 
 // Apply walks the entries in order against the inspected current state. For
-// each: old present and new absent, the current-state IR is renamed in memory
-// and the rename statement is returned as a diff to run first in the plan;
-// old absent, nothing happens (a fresh database, or one already renamed); both
-// present, an error naming the entry. Nothing else moves: a constraint or an
-// index the block does not list keeps its name and is diffed as the model says.
+// each: old present and new absent, the rename statement is returned as a
+// diff to run first in the plan; old absent, nothing happens (a fresh
+// database, or one already renamed); both present, an error naming the entry.
 //
-// current is mutated. schema is the plan's schema: an entry naming another one
-// is refused.
+// current is moved by name only (a table's, a column's, a constraint's with
+// the index behind a primary key or unique constraint, an index's), so a later
+// entry finds what an earlier one renamed: it decides the entries and is no
+// state to diff. What a rename changes elsewhere (a CHECK, an index predicate,
+// a view, a foreign key) is the server's to say: the plan runs the statements
+// in its session and reads the catalogue back. schema is the plan's schema: an
+// entry naming another one is refused.
 func Apply(current *ir.IR, schema string, entries []Entry) ([]diff.Diff, []Result, error) {
+	return walk(current, schema, entries, nil)
+}
+
+// RefuseOnDocument checks the entries against a current state read from a
+// document (plan --source): a plan between two documents renames nothing, so
+// an entry whose old object the document holds is refused by name; an absent
+// one is inert, as in Apply.
+func RefuseOnDocument(current *ir.IR, schema string, entries []Entry) ([]Result, error) {
+	_, results, err := walk(current, schema, entries, func(e Entry) error {
+		return fmt.Errorf("refused: rename %s: a plan between two documents renames nothing. Nothing was planned.", e)
+	})
+	return results, err
+}
+
+// walk is Apply; refuse, when set, is the error for an entry whose old object
+// is present, before the both-exist check.
+func walk(current *ir.IR, schema string, entries []Entry, refuse func(Entry) error) ([]diff.Diff, []Result, error) {
 	if err := ValidateAll(entries); err != nil {
 		return nil, nil, err
 	}
@@ -31,31 +51,38 @@ func Apply(current *ir.IR, schema string, entries []Entry) ([]diff.Diff, []Resul
 		if from.schema != schema {
 			return nil, nil, fmt.Errorf("refactor entry %s: schema %q is not the planned schema %q", e, from.schema, schema)
 		}
-		var d *diff.Diff
-		var err error
+		var r *present
 		switch e.Kind {
 		case KindTable:
-			d, err = renameTable(s, e, from, to)
+			r = renameTable(s, from, to)
 		case KindColumn:
-			d, err = renameColumn(s, e, from, to)
+			r = renameColumn(s, from, to)
 		case KindConstraint:
-			d, err = renameConstraint(s, e, from, to)
+			r = renameConstraint(s, from, to)
 		case KindIndex:
-			d, err = renameIndex(s, e, from, to)
+			r = renameIndex(s, from, to)
 		}
-		if err != nil {
-			return nil, nil, err
+		if r != nil {
+			if refuse != nil {
+				return nil, nil, refuse(e)
+			}
+			if r.taken {
+				return nil, nil, fmt.Errorf("refused: rename %s: both exist. Nothing was planned.", e)
+			}
+			r.move()
+			diffs = append(diffs, *r.step)
 		}
-		if d != nil {
-			diffs = append(diffs, *d)
-		}
-		results = append(results, Result{Entry: e, Applied: d != nil})
+		results = append(results, Result{Entry: e, Applied: r != nil})
 	}
 	return diffs, results, nil
 }
 
-func bothExist(e Entry) error {
-	return fmt.Errorf("refused: rename %s: both exist. Nothing was planned.", e)
+// present is an entry whose old object is present: whether the new name is
+// taken, the in-memory move of the names, and the statement.
+type present struct {
+	taken bool
+	move  func()
+	step  *diff.Diff
 }
 
 func step(typ diff.DiffType, p string, sql string) *diff.Diff {
@@ -85,142 +112,78 @@ func relationExists(s *ir.Schema, name string) bool {
 	return false
 }
 
-func renameTable(s *ir.Schema, e Entry, from, to path) (*diff.Diff, error) {
+func renameTable(s *ir.Schema, from, to path) *present {
 	t := s.Tables[from.leaf]
 	if t == nil {
-		return nil, nil
+		return nil
 	}
-	if relationExists(s, to.leaf) {
-		return nil, bothExist(e)
+	return &present{
+		taken: relationExists(s, to.leaf),
+		move: func() {
+			delete(s.Tables, from.leaf)
+			t.Name = to.leaf
+			s.Tables[to.leaf] = t
+		},
+		step: step(diff.DiffTypeTable, from.schema+"."+to.leaf,
+			fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", q(from.schema, from.leaf), ir.QuoteIdentifier(to.leaf))),
 	}
-	delete(s.Tables, from.leaf)
-	t.Name = to.leaf
-	s.Tables[to.leaf] = t
-	for _, c := range t.Constraints {
-		c.Table = to.leaf
-	}
-	for _, i := range t.Indexes {
-		i.Table = to.leaf
-	}
-	for _, tr := range t.Triggers {
-		tr.Table = to.leaf
-	}
-	for _, p := range t.Policies {
-		p.Table = to.leaf
-	}
-	for _, o := range s.Tables {
-		for _, c := range o.Constraints {
-			if c.ReferencedSchema == from.schema && c.ReferencedTable == from.leaf {
-				c.ReferencedTable = to.leaf
-			}
-		}
-		for k := range o.Dependencies {
-			if d := &o.Dependencies[k]; d.Schema == from.schema && d.Name == from.leaf {
-				d.Name = to.leaf
-			}
-		}
-	}
-	return step(diff.DiffTypeTable, from.schema+"."+to.leaf,
-		fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", q(from.schema, from.leaf), ir.QuoteIdentifier(to.leaf))), nil
 }
 
-func renameColumn(s *ir.Schema, e Entry, from, to path) (*diff.Diff, error) {
+func renameColumn(s *ir.Schema, from, to path) *present {
 	t := s.Tables[from.table]
 	if t == nil {
-		return nil, nil
+		return nil
 	}
 	var col *ir.Column
+	taken := false
 	for _, c := range t.Columns {
-		if c.Name == from.leaf {
+		switch c.Name {
+		case from.leaf:
 			col = c
+		case to.leaf:
+			taken = true
 		}
 	}
 	if col == nil {
-		return nil, nil
+		return nil
 	}
-	for _, c := range t.Columns {
-		if c.Name == to.leaf {
-			return nil, bothExist(e)
-		}
+	return &present{
+		taken: taken,
+		move:  func() { col.Name = to.leaf },
+		step: step(diff.DiffTypeTableColumn, from.schema+"."+from.table+"."+to.leaf,
+			fmt.Sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s;", q(from.schema, from.table), ir.QuoteIdentifier(from.leaf), ir.QuoteIdentifier(to.leaf))),
 	}
-	col.Name = to.leaf
-	renameCols := func(cs []*ir.ConstraintColumn) {
-		for _, c := range cs {
-			if c.Name == from.leaf {
-				c.Name = to.leaf
-			}
-		}
-	}
-	for _, c := range t.Constraints {
-		renameCols(c.Columns)
-		if c.CheckClause != "" {
-			c.CheckClause = replaceIdent(c.CheckClause, from.leaf, to.leaf)
-		}
-		for k, n := range c.DeleteSetColumns {
-			if n == from.leaf {
-				c.DeleteSetColumns[k] = to.leaf
-			}
-		}
-	}
-	for _, o := range s.Tables {
-		for _, c := range o.Constraints {
-			if c.ReferencedSchema == from.schema && c.ReferencedTable == from.table {
-				renameCols(c.ReferencedColumns)
-			}
-		}
-	}
-	for _, i := range t.Indexes {
-		for _, c := range i.Columns {
-			if c.Name == from.leaf {
-				c.Name = to.leaf
-			}
-		}
-		for k, n := range i.IncludeColumns {
-			if n == from.leaf {
-				i.IncludeColumns[k] = to.leaf
-			}
-		}
-		if i.Where != "" {
-			i.Where = replaceIdent(i.Where, from.leaf, to.leaf)
-		}
-	}
-	for _, c := range t.Columns {
-		if c.GeneratedExpr != nil {
-			x := replaceIdent(*c.GeneratedExpr, from.leaf, to.leaf)
-			c.GeneratedExpr = &x
-		}
-	}
-	return step(diff.DiffTypeTableColumn, from.schema+"."+from.table+"."+to.leaf,
-		fmt.Sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s;", q(from.schema, from.table), ir.QuoteIdentifier(from.leaf), ir.QuoteIdentifier(to.leaf))), nil
 }
 
-func renameConstraint(s *ir.Schema, e Entry, from, to path) (*diff.Diff, error) {
+func renameConstraint(s *ir.Schema, from, to path) *present {
 	t := s.Tables[from.table]
 	if t == nil {
-		return nil, nil
+		return nil
 	}
 	c := t.Constraints[from.leaf]
 	if c == nil {
-		return nil, nil
+		return nil
 	}
-	if t.Constraints[to.leaf] != nil || t.Indexes[to.leaf] != nil {
-		return nil, bothExist(e)
+	return &present{
+		taken: t.Constraints[to.leaf] != nil || t.Indexes[to.leaf] != nil,
+		move: func() {
+			delete(t.Constraints, from.leaf)
+			c.Name = to.leaf
+			t.Constraints[to.leaf] = c
+			// PostgreSQL renames the index behind a primary key or unique
+			// constraint with it; the inspected state may list that index too.
+			if i := t.Indexes[from.leaf]; i != nil && (c.Type == ir.ConstraintTypePrimaryKey || c.Type == ir.ConstraintTypeUnique) {
+				delete(t.Indexes, from.leaf)
+				i.Name = to.leaf
+				t.Indexes[to.leaf] = i
+			}
+		},
+		step: step(diff.DiffTypeTableConstraint, from.schema+"."+from.table+"."+to.leaf,
+			fmt.Sprintf("ALTER TABLE %s RENAME CONSTRAINT %s TO %s;", q(from.schema, from.table), ir.QuoteIdentifier(from.leaf), ir.QuoteIdentifier(to.leaf))),
 	}
-	delete(t.Constraints, from.leaf)
-	c.Name = to.leaf
-	t.Constraints[to.leaf] = c
-	// PostgreSQL renames the index behind a primary key or unique constraint
-	// with it; the inspected state may list that index too.
-	if i := t.Indexes[from.leaf]; i != nil && (c.Type == ir.ConstraintTypePrimaryKey || c.Type == ir.ConstraintTypeUnique) {
-		delete(t.Indexes, from.leaf)
-		i.Name = to.leaf
-		t.Indexes[to.leaf] = i
-	}
-	return step(diff.DiffTypeTableConstraint, from.schema+"."+from.table+"."+to.leaf,
-		fmt.Sprintf("ALTER TABLE %s RENAME CONSTRAINT %s TO %s;", q(from.schema, from.table), ir.QuoteIdentifier(from.leaf), ir.QuoteIdentifier(to.leaf))), nil
 }
 
-func renameIndex(s *ir.Schema, e Entry, from, to path) (*diff.Diff, error) {
+func renameIndex(s *ir.Schema, from, to path) *present {
 	var owner *ir.Table
 	for _, t := range s.Tables {
 		if t.Indexes[from.leaf] != nil {
@@ -228,15 +191,17 @@ func renameIndex(s *ir.Schema, e Entry, from, to path) (*diff.Diff, error) {
 		}
 	}
 	if owner == nil {
-		return nil, nil
+		return nil
 	}
-	if relationExists(s, to.leaf) {
-		return nil, bothExist(e)
+	return &present{
+		taken: relationExists(s, to.leaf),
+		move: func() {
+			i := owner.Indexes[from.leaf]
+			delete(owner.Indexes, from.leaf)
+			i.Name = to.leaf
+			owner.Indexes[to.leaf] = i
+		},
+		step: step(diff.DiffTypeTableIndex, from.schema+"."+owner.Name+"."+to.leaf,
+			fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", q(from.schema, from.leaf), ir.QuoteIdentifier(to.leaf))),
 	}
-	i := owner.Indexes[from.leaf]
-	delete(owner.Indexes, from.leaf)
-	i.Name = to.leaf
-	owner.Indexes[to.leaf] = i
-	return step(diff.DiffTypeTableIndex, from.schema+"."+owner.Name+"."+to.leaf,
-		fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", q(from.schema, from.leaf), ir.QuoteIdentifier(to.leaf))), nil
 }
