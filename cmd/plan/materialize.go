@@ -64,5 +64,25 @@ func MaterializeDesired(config *PlanConfig, desired *ir.IR, targetMajorVersion i
 		return nil, err
 	}
 	normalizeSchemaNames(materialized, temp, config.Schema)
+	stripSchemaFromViews(materialized, config.Schema)
 	return materialized, nil
+}
+
+// stripSchemaFromViews renders each materialized view's reference to schema as
+// the target renders it. The inspector prints a view under a search_path of
+// the view's own schema: in the session that is pg_temp_N, so a relation the
+// document does not hold, which resolves to the target's own (a foreign table
+// merp makes before the first plan, merp#1860), prints as schema.name; on the
+// target it prints bare, and upstream's normalizeView strips schema there.
+// The same strip on this side compares both renderings alike; it cannot
+// change what a reference means, since the remap already reads pg_temp_N as
+// schema, the one schema both names resolve to on the target.
+func stripSchemaFromViews(state *ir.IR, schema string) {
+	s := state.Schemas[schema]
+	if s == nil {
+		return
+	}
+	for _, view := range s.Views {
+		view.Definition = ir.StripSchemaPrefixFromBody(view.Definition, schema)
+	}
 }
